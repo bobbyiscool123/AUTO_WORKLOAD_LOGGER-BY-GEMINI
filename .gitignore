@@ -1,3 +1,28 @@
-.env
+# OS or IDE generated files
+.DS_Store
+Thumbs.db
+*.log
+*.bak
+*.swp
+
+# Python Specific
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+venv/
+env/
+*.egg
+
+# Secrets/credentials:
+.env
+*.key
+*.pem
+*.p12
+
+# Various temporary files/folders
+tmp/
+temp/
+node_modules/
