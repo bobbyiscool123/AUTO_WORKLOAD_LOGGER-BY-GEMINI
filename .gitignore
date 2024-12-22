@@ -26,3 +26,4 @@ env/
 tmp/
 temp/
 node_modules/
+.env
