@@ -2,18 +2,28 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import google.generativeai as genai
 from datetime import datetime
+import os
+from dotenv import load_dotenv
 
-# Replace with your Gemini API key
-GOOGLE_API_KEY = "YOUR_API_KEY_HERE"  
+load_dotenv()  # Load variables from .env file
+
+# Get the Gemini API key from the environment variable
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# Check if the API key is set
+if not GOOGLE_API_KEY:
+    print("Error: GOOGLE_API_KEY not set in .env file.")
+    exit()
 
 # Configure Gemini API
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("gemini-pro")  # Using Gemini Pro model
+
+model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
 
 def translate_to_console_style(text):
     """Translates the text to console-style log with Gemini."""
     try:
-      prompt = f"""
+        prompt = f"""
             Translate the following text into a console-style log format that simulates git-like outputs for software project status updates. The output should maintain a tone of a command-line interface and should use similar words.
 
             Example Input:
@@ -28,35 +38,35 @@ def translate_to_console_style(text):
 
             Input Text: {text}
             """
+        
+        response = model.generate_content(prompt)
 
-      response = model.generate_content(prompt)
-
-      return response.text
+        return response.text
     except Exception as e:
-      print(f"Error with Gemini API: {e}")
-      return "Error in translation."
+        print(f"Error with Gemini API: {e}")
+        return "Error in translation."
 
 def save_log(log_text, file_path):
-  try:
-    with open(file_path, "a") as f:
-          f.write(log_text + "\n")
-          print("text appended")
-    return True
-  except Exception as e:
-    print(f"Error saving: {e}")
-    return False
+    try:
+        with open(file_path, "a") as f:
+            f.write(log_text + "\n")
+            print("text appended")
+        return True
+    except Exception as e:
+        print(f"Error saving: {e}")
+        return False
 
 def update_log():
     text = text_entry.get()
     if not text:
         messagebox.showerror("Error", "Please enter text to log.")
         return
-    
+
     translated_text = translate_to_console_style(text)
 
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
-    
+
     log_text = f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {translated_text}"
 
     if not file_path:
@@ -76,9 +86,9 @@ def save_as_file():
         update_file_label()
 
 def change_file():
-  global file_path
-  file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-  if file_path:
+    global file_path
+    file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+    if file_path:
         update_file_label()
 
 def update_file_label():
