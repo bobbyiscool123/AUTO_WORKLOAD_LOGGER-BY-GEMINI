@@ -4,6 +4,7 @@ import google.generativeai as genai
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+import re
 
 load_dotenv()  # Load variables from .env file
 
@@ -25,6 +26,8 @@ def translate_to_console_style(text):
     try:
         prompt = f"""
             Translate the following text into a console-style log format that simulates git-like outputs for software project status updates. The output should maintain a tone of a command-line interface and should use similar words.
+            
+            Remove any triple backticks from the output. Remove any extra white space.
 
             Example Input:
               - Started working on the user authentication feature.
@@ -40,20 +43,23 @@ def translate_to_console_style(text):
             """
         
         response = model.generate_content(prompt)
-
-        return response.text
+        
+        # Remove triple backticks and extra spaces, then return
+        cleaned_text = re.sub(r'```\w*\n|```', '', response.text).strip()
+        cleaned_text = ' '.join(cleaned_text.split())
+        return cleaned_text
     except Exception as e:
-        print(f"Error with Gemini API: {e}")
+        messagebox.showerror("Error", f"Error with Gemini API: {e}")
         return "Error in translation."
+
 
 def save_log(log_text, file_path):
     try:
         with open(file_path, "a") as f:
             f.write(log_text + "\n")
-            print("text appended")
         return True
     except Exception as e:
-        print(f"Error saving: {e}")
+        messagebox.showerror("Error", f"Error saving log: {e}")
         return False
 
 def update_log():
@@ -63,11 +69,14 @@ def update_log():
         return
 
     translated_text = translate_to_console_style(text)
+    
+    if translated_text == "Error in translation.":
+        return
 
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    log_text = f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {translated_text}"
+    log_text = f"[{formatted_time}] {translated_text}"
 
     if not file_path:
           messagebox.showerror("Error", "Save a new file or select an existing file")
