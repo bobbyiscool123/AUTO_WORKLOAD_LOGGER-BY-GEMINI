@@ -21,6 +21,19 @@ genai.configure(api_key=GOOGLE_API_KEY)
 
 model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
 
+# --- Color Palette ---
+bg_color = "#f0f0f0"  # Light gray background
+frame_bg = "#e0e0e0" # light gray background
+button_bg = "#e0e0e0"  # Light gray for buttons
+button_fg = "#333333"  # Dark gray for button text
+button_hover = "#d0d0d0"  # Light gray for button hover
+text_color = "#333333"  # Dark gray for text
+entry_bg = "#ffffff" # White background for entry
+entry_fg = "#000000" # Black foreground for entry
+scroll_bg = "#d0d0d0" # Light gray for scrollbar
+scroll_fg = "#333333" # Dark gray for scrollbar
+
+
 def translate_to_console_style(text):
     """Translates the text to console-style log with Gemini."""
     try:
@@ -103,46 +116,62 @@ def change_file():
 def update_file_label():
     file_label.config(text=f"Current File: {file_path}")
 
+def on_button_enter(event):
+    event.widget.config(bg=button_hover)
+
+def on_button_leave(event):
+    event.widget.config(bg=button_bg)
+
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Gemini Workload Logger")
 root.geometry("600x400")
+root.configure(bg=bg_color, borderwidth=0)
 
 # Variable to store the file path
 file_path = None
 
 # Input Frame
-input_frame = tk.Frame(root)
+input_frame = tk.Frame(root, bg=frame_bg, borderwidth=0)
 input_frame.pack(pady=10, padx=10, fill=tk.X)
 
-tk.Label(input_frame, text="Enter Text to Update Workload:").pack(side=tk.LEFT)
-text_entry = tk.Entry(input_frame, width=40)
+tk.Label(input_frame, text="Enter Text to Update Workload:", bg=frame_bg, fg=text_color).pack(side=tk.LEFT)
+text_entry = tk.Entry(input_frame, width=40, bg=entry_bg, fg=entry_fg, insertbackground=entry_fg, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
 
-update_button = tk.Button(input_frame, text="Update Log", command=update_log)
+update_button = tk.Button(input_frame, text="Update Log", bg=button_bg, fg=button_fg, borderwidth=0)
 update_button.pack(side=tk.LEFT, padx=5)
+update_button.bind("<Enter>", on_button_enter)
+update_button.bind("<Leave>", on_button_leave)
+update_button.config(command=update_log)
 
 # File Frame
-file_frame = tk.Frame(root)
+file_frame = tk.Frame(root, bg=frame_bg, borderwidth=0)
 file_frame.pack(pady=10, padx=10, fill=tk.X)
 
-file_label = tk.Label(file_frame, text="Current File: None")
+file_label = tk.Label(file_frame, text="Current File: None", bg=frame_bg, fg=text_color)
 file_label.pack(side=tk.LEFT, expand=True, fill=tk.X)
 
-save_file_button = tk.Button(file_frame, text="Save as File", command=save_as_file)
+save_file_button = tk.Button(file_frame, text="Save as File", bg=button_bg, fg=button_fg, borderwidth=0)
 save_file_button.pack(side=tk.LEFT, padx=5)
+save_file_button.bind("<Enter>", on_button_enter)
+save_file_button.bind("<Leave>", on_button_leave)
+save_file_button.config(command=save_as_file)
 
-change_file_button = tk.Button(file_frame, text="Change File", command=change_file)
+change_file_button = tk.Button(file_frame, text="Change File", bg=button_bg, fg=button_fg, borderwidth=0)
 change_file_button.pack(side=tk.LEFT, padx=5)
+change_file_button.bind("<Enter>", on_button_enter)
+change_file_button.bind("<Leave>", on_button_leave)
+change_file_button.config(command=change_file)
 
 # Log Display
-log_frame = tk.Frame(root)
+log_frame = tk.Frame(root, bg=bg_color, borderwidth=0)
 log_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
-log_display = tk.Text(log_frame, height=15, wrap=tk.WORD)
+log_display = tk.Text(log_frame, height=15, wrap=tk.WORD, bg=bg_color, fg=text_color, borderwidth=0)
 log_display.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-scrollbar = tk.Scrollbar(log_frame, command=log_display.yview)
+scrollbar = tk.Scrollbar(log_frame, command=log_display.yview, bg=scroll_bg, activebackground=scroll_fg)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 log_display.config(yscrollcommand=scrollbar.set)
 
