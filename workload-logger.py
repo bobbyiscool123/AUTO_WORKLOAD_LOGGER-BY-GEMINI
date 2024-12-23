@@ -145,7 +145,11 @@ def update_log():
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    log_text = f"{translated_text}"
+    log_text = f"[{formatted_time}] {translated_text}"
+
+    if not file_path:
+          messagebox.showerror("Error", "Save a new file or select an existing file")
+          return
 
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
