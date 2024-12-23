@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 import re
 import json
+import threading
 
 load_dotenv()
 
@@ -36,7 +37,7 @@ themes = {
         "scroll_bg": "#c0d0ef",
         "scroll_fg": "#333333",
     },
-    "Light Gray": {
+     "Light Gray": {
         "bg_color": "#f0f0f0",
         "frame_bg": "#e0e0e0",
         "button_bg": "#e0e0e0",
@@ -84,9 +85,13 @@ if not os.path.exists(CACHE_DIR):
 CACHE_FILE = os.path.join(CACHE_DIR, "previous_file.json")
 THEME_FILE = os.path.join(CACHE_DIR, "previous_theme.json")
 
+# --- Loading Indicators ---
+loading_bar = None
+gemini_loading_label = None
 
 def translate_to_console_style(text):
     """Translates the text to console-style log with Gemini, in python interpreter style."""
+    show_gemini_loading()
     try:
         prompt = f"""
             Translate the following text into a console-style log format that simulates a python interpreter output. Each entry should be on a new line as if it were being executed in a python interpreter. The output should maintain a tone of a command-line interface and should use similar words. Ensure to include '>>>' to indicate that each line is an executable statement.
@@ -115,7 +120,8 @@ def translate_to_console_style(text):
     except Exception as e:
         messagebox.showerror("Error", f"Error with Gemini API: {e}")
         return "Error in translation."
-
+    finally:
+        hide_gemini_loading()
 
 def save_log(log_text, file_path):
     try:
@@ -154,19 +160,24 @@ def update_log():
     else:
         messagebox.showerror("Error", "Failed to update log file.")
 
+
 def save_as_file():
     global file_path
+    show_loading_bar("Saving File...")
     file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
     if file_path:
         update_file_label()
         save_previous_file(file_path)
+    hide_loading_bar()
 
 def change_file():
     global file_path
+    show_loading_bar("Opening File...")
     file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
     if file_path:
         update_file_label()
         save_previous_file(file_path)
+    hide_loading_bar()
 
 def update_file_label():
     file_label.config(text=f"Current File: {file_path}")
@@ -210,6 +221,7 @@ def file_menu_open():
 def file_menu_view():
     if file_path:
         try:
+            show_loading_bar("Loading File...")
             with open(file_path, "r") as f:
                 content = f.read()
                 view_window = tk.Toplevel(root)
@@ -222,9 +234,10 @@ def file_menu_view():
                 scrollbar = tk.Scrollbar(view_window, command=view_text.yview, bg=themes[current_theme]["scroll_bg"], activebackground=themes[current_theme]["scroll_fg"])
                 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
                 view_text.config(yscrollcommand=scrollbar.set)
-
+            hide_loading_bar()
         except Exception as e:
             messagebox.showerror("Error", f"Error viewing file: {e}")
+            hide_loading_bar()
     else:
         messagebox.showerror("Error", "No file opened to view.")
 
@@ -279,6 +292,39 @@ def create_theme_menu(menu_bar):
     for theme_name in themes:
         theme_menu.add_command(label=theme_name, command=lambda name=theme_name: apply_theme(name))
     menu_bar.add_cascade(label="Theme", menu=theme_menu)
+
+# --- Loading Indicator Functions ---
+def show_loading_bar(message):
+    global loading_bar
+    if loading_bar is None:
+        loading_bar = ttk.Progressbar(root, mode='indeterminate')
+        loading_bar.pack(pady=10)
+        tk.Label(root, text=message).pack()
+    loading_bar.start()
+    root.update_idletasks() # Forces immediate redraw
+
+def hide_loading_bar():
+    global loading_bar
+    if loading_bar:
+        loading_bar.stop()
+        loading_bar.destroy()
+        loading_bar = None
+        for widget in root.winfo_children():
+            if isinstance(widget, tk.Label) and widget.cget("text") in ["Saving File...", "Opening File...", "Loading File..."]:
+                widget.destroy()
+
+def show_gemini_loading():
+    global gemini_loading_label
+    if gemini_loading_label is None:
+        gemini_loading_label = tk.Label(root, text="Generating text...", font=("TkDefaultFont", 10))
+        gemini_loading_label.pack(pady=5)
+        root.update_idletasks()  # Forces the label to be shown immediately.
+
+def hide_gemini_loading():
+    global gemini_loading_label
+    if gemini_loading_label:
+        gemini_loading_label.destroy()
+        gemini_loading_label = None
 
 # --- GUI Setup ---
 root = tk.Tk()
@@ -354,12 +400,10 @@ if previous_file and messagebox.askyesno("Load Previous", f"Load previously open
     file_path = previous_file
     update_file_label()
     text_entry.focus_set()  # Set focus to text_entry after loading previous file
-    root.after(100, lambda: text_entry.focus_set()) # Added to guarantee focus is set
-
+    root.after(100, lambda: text_entry.focus_set())
 
 apply_theme(current_theme)
 text_entry.focus_set() # Set focus to text_entry on start
-root.after(100, lambda: text_entry.focus_set())  # Added to guarantee focus is set
-
+root.after(100, lambda: text_entry.focus_set())
 
 root.mainloop()
