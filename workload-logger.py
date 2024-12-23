@@ -37,7 +37,7 @@ themes = {
         "scroll_bg": "#c0d0ef",
         "scroll_fg": "#333333",
     },
-     "Light Gray": {
+    "Light Gray": {
         "bg_color": "#f0f0f0",
         "frame_bg": "#e0e0e0",
         "button_bg": "#e0e0e0",
@@ -89,6 +89,40 @@ THEME_FILE = os.path.join(CACHE_DIR, "previous_theme.json")
 loading_bar = None
 gemini_loading_label = None
 
+# --- Loading Indicator Functions ---
+def show_loading_bar(message):
+    global loading_bar
+    if loading_bar is None:
+        loading_bar = ttk.Progressbar(root, mode='indeterminate')
+        loading_bar.pack(pady=10)
+        tk.Label(root, text=message).pack()
+    loading_bar.start()
+    root.update_idletasks() # Forces immediate redraw
+
+def hide_loading_bar():
+    global loading_bar
+    if loading_bar:
+        loading_bar.stop()
+        loading_bar.destroy()
+        loading_bar = None
+        for widget in root.winfo_children():
+            if isinstance(widget, tk.Label) and widget.cget("text") in ["Saving File...", "Opening File...", "Loading File..."]:
+                widget.destroy()
+
+def show_gemini_loading():
+    global gemini_loading_label
+    if gemini_loading_label is None:
+        gemini_loading_label = tk.Label(root, text="Generating text...", font=("TkDefaultFont", 10))
+        gemini_loading_label.pack(pady=5)
+        root.update_idletasks()  # Forces the label to be shown immediately.
+
+def hide_gemini_loading():
+    global gemini_loading_label
+    if gemini_loading_label:
+        gemini_loading_label.destroy()
+        gemini_loading_label = None
+
+
 def translate_to_console_style(text):
     """Translates the text to console-style log with Gemini, in python interpreter style."""
     show_gemini_loading()
@@ -107,6 +141,7 @@ def translate_to_console_style(text):
               >>> [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
               >>> [+] 2024-05-08 14:45:00: Implemented login functionality.
               >>> [*] 2024-05-08 15:15:00: Testing user login module.
+              do not type the time and date 2 times only 1 time
 
             Input Text: {text}
             """
@@ -122,6 +157,7 @@ def translate_to_console_style(text):
         return "Error in translation."
     finally:
         hide_gemini_loading()
+
 
 def save_log(log_text, file_path):
     try:
@@ -142,16 +178,16 @@ def update_log():
           save_as_file()
         else:
            return
+
+    now = datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     
     translated_text = translate_to_console_style(text)
     
     if translated_text == "Error in translation.":
         return
-
-    now = datetime.now()
-    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
-    log_text = f"[{formatted_time}] {translated_text}"
+    
+    log_text = f"[{formatted_time}] {translated_text.replace('2024-05-08', now.strftime('%Y-%m-%d'))}"
 
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
@@ -177,6 +213,13 @@ def change_file():
     if file_path:
         update_file_label()
         save_previous_file(file_path)
+        # Load file content into display
+        log_display.delete("1.0", tk.END)
+        try:
+            with open(file_path, "r") as f:
+                log_display.insert(tk.END, f.read())
+        except Exception as e:
+             messagebox.showerror("Error", f"Error loading file contents: {e}")
     hide_loading_bar()
 
 def update_file_label():
@@ -286,45 +329,11 @@ def apply_theme(theme_name):
 
     save_previous_theme(theme_name)
 
-
 def create_theme_menu(menu_bar):
     theme_menu = tk.Menu(menu_bar, tearoff=0)
     for theme_name in themes:
         theme_menu.add_command(label=theme_name, command=lambda name=theme_name: apply_theme(name))
     menu_bar.add_cascade(label="Theme", menu=theme_menu)
-
-# --- Loading Indicator Functions ---
-def show_loading_bar(message):
-    global loading_bar
-    if loading_bar is None:
-        loading_bar = ttk.Progressbar(root, mode='indeterminate')
-        loading_bar.pack(pady=10)
-        tk.Label(root, text=message).pack()
-    loading_bar.start()
-    root.update_idletasks() # Forces immediate redraw
-
-def hide_loading_bar():
-    global loading_bar
-    if loading_bar:
-        loading_bar.stop()
-        loading_bar.destroy()
-        loading_bar = None
-        for widget in root.winfo_children():
-            if isinstance(widget, tk.Label) and widget.cget("text") in ["Saving File...", "Opening File...", "Loading File..."]:
-                widget.destroy()
-
-def show_gemini_loading():
-    global gemini_loading_label
-    if gemini_loading_label is None:
-        gemini_loading_label = tk.Label(root, text="Generating text...", font=("TkDefaultFont", 10))
-        gemini_loading_label.pack(pady=5)
-        root.update_idletasks()  # Forces the label to be shown immediately.
-
-def hide_gemini_loading():
-    global gemini_loading_label
-    if gemini_loading_label:
-        gemini_loading_label.destroy()
-        gemini_loading_label = None
 
 # --- GUI Setup ---
 root = tk.Tk()
@@ -401,6 +410,14 @@ if previous_file and messagebox.askyesno("Load Previous", f"Load previously open
     update_file_label()
     text_entry.focus_set()  # Set focus to text_entry after loading previous file
     root.after(100, lambda: text_entry.focus_set())
+    # Load file content into display
+    log_display.delete("1.0", tk.END)
+    try:
+        with open(file_path, "r") as f:
+            log_display.insert(tk.END, f.read())
+    except Exception as e:
+        messagebox.showerror("Error", f"Error loading file contents: {e}")
+
 
 apply_theme(current_theme)
 text_entry.focus_set() # Set focus to text_entry on start
