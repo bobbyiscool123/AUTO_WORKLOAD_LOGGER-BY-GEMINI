@@ -1,12 +1,13 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 import google.generativeai as genai
 from datetime import datetime
 import os
 from dotenv import load_dotenv
 import re
+import json
 
-load_dotenv()  # Load variables from .env file
+load_dotenv()
 
 # Get the Gemini API key from the environment variable
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -21,24 +22,29 @@ genai.configure(api_key=GOOGLE_API_KEY)
 
 model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
 
-# --- Color Palette ---
-bg_color = "#f0f0f0"  # Light gray background
-frame_bg = "#e0e0e0" # light gray background
-button_bg = "#e0e0e0"  # Light gray for buttons
-button_fg = "#333333"  # Dark gray for button text
-button_hover = "#d0d0d0"  # Light gray for button hover
-text_color = "#333333"  # Dark gray for text
-entry_bg = "#ffffff" # White background for entry
-entry_fg = "#000000" # Black foreground for entry
-scroll_bg = "#d0d0d0" # Light gray for scrollbar
-scroll_fg = "#333333" # Dark gray for scrollbar
+# --- Color Palette (Windows 11 Blue Theme) ---
+bg_color = "#f0f8ff" # Light blue background
+frame_bg = "#e6f0ff" # Lighter blue frame background
+button_bg = "#d0e0ff" # Light blue for buttons
+button_fg = "#333333" # Dark gray for button text
+button_hover = "#c0d0ef" # Light blue for button hover
+text_color = "#000000"  # Black for text
+entry_bg = "#ffffff"   # White background for entry
+entry_fg = "#000000"   # Black foreground for entry
+scroll_bg = "#c0d0ef"  # Light blue for scrollbar
+scroll_fg = "#333333"  # Dark gray for scrollbar
 
+# --- Cache Directory ---
+CACHE_DIR = "cache"
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+CACHE_FILE = os.path.join(CACHE_DIR, "previous_file.json")
 
 def translate_to_console_style(text):
-    """Translates the text to console-style log with Gemini."""
+    """Translates the text to console-style log with Gemini, in python interpreter style."""
     try:
         prompt = f"""
-            Translate the following text into a console-style log format that simulates git-like outputs for software project status updates. The output should maintain a tone of a command-line interface and should use similar words.
+            Translate the following text into a console-style log format that simulates a python interpreter output. Each entry should be on a new line as if it were being executed in a python interpreter. The output should maintain a tone of a command-line interface and should use similar words. Ensure to include '>>>' to indicate that each line is an executable statement.
             
             Remove any triple backticks from the output. Remove any extra white space.
 
@@ -48,9 +54,9 @@ def translate_to_console_style(text):
               - Testing the user login module.
 
             Example Output:
-              [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
-              [+] 2024-05-08 14:45:00: Implemented login functionality.
-              [*] 2024-05-08 15:15:00: Testing user login module.
+              >>> [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
+              >>> [+] 2024-05-08 14:45:00: Implemented login functionality.
+              >>> [*] 2024-05-08 15:15:00: Testing user login module.
 
             Input Text: {text}
             """
@@ -78,9 +84,14 @@ def save_log(log_text, file_path):
 def update_log():
     text = text_entry.get()
     if not text:
-        messagebox.showerror("Error", "Please enter text to log.")
-        return
-
+         messagebox.showerror("Error", "Please enter text to log.")
+         return
+    if not file_path:
+        if messagebox.askyesno("Save File", "No file is currently opened. Do you want to save as a new file?"):
+          save_as_file()
+        else:
+           return
+    
     translated_text = translate_to_console_style(text)
     
     if translated_text == "Error in translation.":
@@ -89,29 +100,27 @@ def update_log():
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    log_text = f"[{formatted_time}] {translated_text}"
-
-    if not file_path:
-          messagebox.showerror("Error", "Save a new file or select an existing file")
-          return
+    log_text = f"{translated_text}"
 
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
         text_entry.delete(0, tk.END)
     else:
-         messagebox.showerror("Error", "Failed to update log file.")
+        messagebox.showerror("Error", "Failed to update log file.")
 
 def save_as_file():
     global file_path
     file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
     if file_path:
         update_file_label()
+        save_previous_file(file_path)
 
 def change_file():
     global file_path
     file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
     if file_path:
         update_file_label()
+        save_previous_file(file_path)
 
 def update_file_label():
     file_label.config(text=f"Current File: {file_path}")
@@ -122,14 +131,81 @@ def on_button_enter(event):
 def on_button_leave(event):
     event.widget.config(bg=button_bg)
 
+def on_enter_key(event):
+    update_log()
+
+# --- Persistent File Handling ---
+def load_previous_file():
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                cache_data = json.load(f)
+                return cache_data.get("previous_file")
+        except (json.JSONDecodeError, KeyError):
+            return None
+    return None
+
+def save_previous_file(file_path):
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump({"previous_file": file_path}, f)
+    except Exception as e:
+         messagebox.showerror("Error", f"Error saving file to cache: {e}")
+
+def file_menu_save():
+    if file_path:
+        update_log()
+    else:
+        save_as_file()
+
+def file_menu_open():
+    change_file()
+
+def file_menu_view():
+    if file_path:
+        try:
+            with open(file_path, "r") as f:
+                content = f.read()
+                view_window = tk.Toplevel(root)
+                view_window.title(f"Viewing {os.path.basename(file_path)}")
+                view_text = tk.Text(view_window, wrap=tk.WORD, bg=bg_color, fg=text_color, borderwidth=0)
+                view_text.insert(tk.END, content)
+                view_text.config(state=tk.DISABLED)
+                view_text.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+                scrollbar = tk.Scrollbar(view_window, command=view_text.yview, bg=scroll_bg, activebackground=scroll_fg)
+                scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+                view_text.config(yscrollcommand=scrollbar.set)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Error viewing file: {e}")
+    else:
+        messagebox.showerror("Error", "No file opened to view.")
+
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Gemini Workload Logger")
 root.geometry("600x400")
 root.configure(bg=bg_color, borderwidth=0)
 
+# --- File Menu ---
+menu_bar = tk.Menu(root)
+file_menu = tk.Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="Save", command=file_menu_save)
+file_menu.add_command(label="Open", command=file_menu_open)
+file_menu.add_command(label="View", command=file_menu_view)
+menu_bar.add_cascade(label="File", menu=file_menu)
+root.config(menu=menu_bar)
+
 # Variable to store the file path
 file_path = None
+
+# Load previous file if exists
+previous_file = load_previous_file()
+if previous_file and messagebox.askyesno("Load Previous", f"Load previously opened file '{os.path.basename(previous_file)}'?"):
+    file_path = previous_file
+    update_file_label()
+
 
 # Input Frame
 input_frame = tk.Frame(root, bg=frame_bg, borderwidth=0)
@@ -138,6 +214,7 @@ input_frame.pack(pady=10, padx=10, fill=tk.X)
 tk.Label(input_frame, text="Enter Text to Update Workload:", bg=frame_bg, fg=text_color).pack(side=tk.LEFT)
 text_entry = tk.Entry(input_frame, width=40, bg=entry_bg, fg=entry_fg, insertbackground=entry_fg, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
+text_entry.bind("<Return>", on_enter_key)
 
 update_button = tk.Button(input_frame, text="Update Log", bg=button_bg, fg=button_fg, borderwidth=0)
 update_button.pack(side=tk.LEFT, padx=5)
