@@ -36,7 +36,7 @@ themes = {
         "scroll_bg": "#c0d0ef",
         "scroll_fg": "#333333",
     },
-     "Light Gray": {
+    "Light Gray": {
         "bg_color": "#f0f0f0",
         "frame_bg": "#e0e0e0",
         "button_bg": "#e0e0e0",
@@ -150,6 +150,7 @@ def update_log():
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
         text_entry.delete(0, tk.END)
+        text_entry.focus_set() # Set focus again after successful update
     else:
         messagebox.showerror("Error", "Failed to update log file.")
 
@@ -352,11 +353,13 @@ previous_file = load_previous_file()
 if previous_file and messagebox.askyesno("Load Previous", f"Load previously opened file '{os.path.basename(previous_file)}'?"):
     file_path = previous_file
     update_file_label()
-    text_entry.focus_set() # Set focus to text_entry after loading previous file
-    
+    text_entry.focus_set()  # Set focus to text_entry after loading previous file
+    root.after(100, lambda: text_entry.focus_set()) # Added to guarantee focus is set
+
 
 apply_theme(current_theme)
 text_entry.focus_set() # Set focus to text_entry on start
+root.after(100, lambda: text_entry.focus_set())  # Added to guarantee focus is set
 
 
 root.mainloop()
