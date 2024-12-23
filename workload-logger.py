@@ -49,7 +49,7 @@ themes = {
         "scroll_bg": "#d0d0d0",
         "scroll_fg": "#333333",
     },
-    "Dark": {
+     "Dark": {
         "bg_color": "#2b2b2b",  # Dark gray background
         "frame_bg": "#333333",  # Darker gray frame background
         "button_bg": "#444444",  # Slightly lighter dark gray for buttons
@@ -185,11 +185,8 @@ def update_log():
     
     if translated_text == "Error in translation.":
         return
-
-    now = datetime.now()
-    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
-    log_text = f"{translated_text}"
+    
+    log_text = f"[{formatted_time}] {translated_text.replace('2024-05-08', now.strftime('%Y-%m-%d'))}"
 
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
@@ -331,9 +328,6 @@ def apply_theme(theme_name):
     save_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     change_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
 
-    # Update Labels
-    tk.Label(input_frame, text="Enter Text to Update Workload:", bg=themes[current_theme]["frame_bg"], fg=themes[current_theme]["text_color"]).pack(side=tk.LEFT)
-    
     # Manually call hover binding functions
     update_button.bind("<Enter>", on_button_enter)
     update_button.bind("<Leave>", on_button_leave)
@@ -356,6 +350,14 @@ root.title("Gemini Workload Logger")
 root.geometry("600x400")
 root.configure(borderwidth=0)
 
+# Set Icon
+try:
+    icon_path = os.path.join(os.path.dirname(__file__), "geminiicon.png")
+    icon = tk.PhotoImage(file=icon_path)
+    root.iconphoto(False, icon)
+except Exception as e:
+    print(f"Error loading icon: {e}")
+    
 # Variable to store the file path
 file_path = None
 
@@ -369,14 +371,8 @@ menu_bar.add_cascade(label="File", menu=file_menu)
 create_theme_menu(menu_bar)
 root.config(menu=menu_bar)
 
-
-
-# Load previous file if exists
-previous_file = load_previous_file()
-if previous_file and messagebox.askyesno("Load Previous", f"Load previously opened file '{os.path.basename(previous_file)}'?"):
-    file_path = previous_file
-    update_file_label()
-
+# Load previous theme
+current_theme = load_previous_theme()
 
 # Input Frame
 input_frame = tk.Frame(root, borderwidth=0)
@@ -424,8 +420,22 @@ scrollbar = tk.Scrollbar(log_frame, command=log_display.yview)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 log_display.config(yscrollcommand=scrollbar.set)
 
-#Load previous theme
-current_theme = load_previous_theme()
+# Load previous file if exists
+previous_file = load_previous_file()
+if previous_file and messagebox.askyesno("Load Previous", f"Load previously opened file '{os.path.basename(previous_file)}'?"):
+    file_path = previous_file
+    update_file_label()
+    text_entry.focus_set()  # Set focus to text_entry after loading previous file
+    root.after(100, lambda: text_entry.focus_set())
+    # Load file content into display
+    log_display.delete("1.0", tk.END)
+    try:
+        with open(file_path, "r") as f:
+            log_display.insert(tk.END, f.read())
+    except Exception as e:
+        messagebox.showerror("Error", f"Error loading file contents: {e}")
+
+
 apply_theme(current_theme)
 text_entry.focus_set() # Set focus to text_entry on start
 root.after(100, lambda: text_entry.focus_set())
