@@ -36,7 +36,7 @@ themes = {
         "scroll_bg": "#c0d0ef",
         "scroll_fg": "#333333",
     },
-     "Light Gray": {
+    "Light Gray": {
         "bg_color": "#f0f0f0",
         "frame_bg": "#e0e0e0",
         "button_bg": "#e0e0e0",
@@ -48,7 +48,7 @@ themes = {
         "scroll_bg": "#d0d0d0",
         "scroll_fg": "#333333",
     },
-     "Dark": {
+    "Dark": {
         "bg_color": "#2b2b2b",  # Dark gray background
         "frame_bg": "#333333",  # Darker gray frame background
         "button_bg": "#444444",  # Slightly lighter dark gray for buttons
@@ -261,9 +261,6 @@ def apply_theme(theme_name):
     update_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     save_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     change_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
-
-    # Update Labels
-    tk.Label(input_frame, text="Enter Text to Update Workload:", bg=themes[current_theme]["frame_bg"], fg=themes[current_theme]["text_color"]).pack(side=tk.LEFT)
     
     # Manually call hover binding functions
     update_button.bind("<Enter>", on_button_enter)
@@ -289,9 +286,6 @@ root.title("Gemini Workload Logger")
 root.geometry("600x400")
 root.configure(borderwidth=0)
 
-# Variable to store the file path
-file_path = None
-
 # --- File Menu ---
 menu_bar = tk.Menu(root)
 file_menu = tk.Menu(menu_bar, tearoff=0)
@@ -302,7 +296,8 @@ menu_bar.add_cascade(label="File", menu=file_menu)
 create_theme_menu(menu_bar)
 root.config(menu=menu_bar)
 
-
+# Variable to store the file path
+file_path = None
 
 # Load previous file if exists
 previous_file = load_previous_file()
@@ -310,12 +305,14 @@ if previous_file and messagebox.askyesno("Load Previous", f"Load previously open
     file_path = previous_file
     update_file_label()
 
+#Load previous theme
+current_theme = load_previous_theme()
 
 # Input Frame
 input_frame = tk.Frame(root, borderwidth=0)
 input_frame.pack(pady=10, padx=10, fill=tk.X)
 
-tk.Label(input_frame, text="Enter Text to Update Workload:", borderwidth=0).pack(side=tk.LEFT)
+
 text_entry = tk.Entry(input_frame, width=40, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
 text_entry.bind("<Return>", on_enter_key)
@@ -356,8 +353,6 @@ scrollbar = tk.Scrollbar(log_frame, command=log_display.yview)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 log_display.config(yscrollcommand=scrollbar.set)
 
-#Load previous theme
-current_theme = load_previous_theme()
 apply_theme(current_theme)
 
 root.mainloop()
