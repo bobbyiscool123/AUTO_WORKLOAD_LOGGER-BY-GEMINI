@@ -35,10 +35,10 @@ scroll_fg = "#333333" # Dark gray for scrollbar
 
 
 def translate_to_console_style(text):
-    """Translates the text to console-style log with Gemini."""
+    """Translates the text to console-style log with Gemini, in python interpreter style."""
     try:
         prompt = f"""
-            Translate the following text into a console-style log format that simulates git-like outputs for software project status updates. The output should maintain a tone of a command-line interface and should use similar words.
+            Translate the following text into a console-style log format that simulates a python interpreter output. Each entry should be on a new line as if it were being executed in a python interpreter. The output should maintain a tone of a command-line interface and should use similar words. Ensure to include '>>>' to indicate that each line is an executable statement.
             
             Remove any triple backticks from the output. Remove any extra white space.
 
@@ -48,9 +48,9 @@ def translate_to_console_style(text):
               - Testing the user login module.
 
             Example Output:
-              [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
-              [+] 2024-05-08 14:45:00: Implemented login functionality.
-              [*] 2024-05-08 15:15:00: Testing user login module.
+              >>> [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
+              >>> [+] 2024-05-08 14:45:00: Implemented login functionality.
+              >>> [*] 2024-05-08 15:15:00: Testing user login module.
 
             Input Text: {text}
             """
@@ -89,7 +89,7 @@ def update_log():
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    log_text = f"[{formatted_time}] {translated_text}"
+    log_text = f"{translated_text}"
 
     if not file_path:
           messagebox.showerror("Error", "Save a new file or select an existing file")
