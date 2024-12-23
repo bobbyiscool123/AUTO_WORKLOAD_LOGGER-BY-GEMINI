@@ -1,32 +1,20 @@
-# OS or IDE generated files
-.DS_Store
-Thumbs.db
-*.log
-*.bak
-*.swp
+# Ignore .env files in the root directory
+.env
 
-# Python Specific
+# Ignore specific files in the cache directory
+cache/previous_file.json
+cache/previous_theme.json
+
+# Optionally ignore the entire cache directory
+# cache/
+
+# OS generated files
 __pycache__/
 *.pyc
 *.pyo
-*.egg-info/
-build/
-dist/
-venv/
-env/
-*.egg
-
-# Secrets/credentials:
-.env
-*.key
-*.pem
-*.p12
-
-# Various temporary files/folders
-tmp/
-temp/
-node_modules/
-.env
-**/.env
-previous_theme.json
-previous_file.json
+*.log
+*.bak
+*.swp
+*.swo
+.*.swp
+.*.swo
