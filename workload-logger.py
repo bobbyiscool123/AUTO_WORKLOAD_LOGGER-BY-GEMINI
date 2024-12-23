@@ -22,23 +22,68 @@ genai.configure(api_key=GOOGLE_API_KEY)
 
 model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
 
-# --- Color Palette (Windows 11 Blue Theme) ---
-bg_color = "#f0f8ff" # Light blue background
-frame_bg = "#e6f0ff" # Lighter blue frame background
-button_bg = "#d0e0ff" # Light blue for buttons
-button_fg = "#333333" # Dark gray for button text
-button_hover = "#c0d0ef" # Light blue for button hover
-text_color = "#000000"  # Black for text
-entry_bg = "#ffffff"   # White background for entry
-entry_fg = "#000000"   # Black foreground for entry
-scroll_bg = "#c0d0ef"  # Light blue for scrollbar
-scroll_fg = "#333333"  # Dark gray for scrollbar
+# --- Color Palettes ---
+themes = {
+    "Windows 11 Blue": {
+        "bg_color": "#f0f8ff",
+        "frame_bg": "#e6f0ff",
+        "button_bg": "#d0e0ff",
+        "button_fg": "#333333",
+        "button_hover": "#c0d0ef",
+        "text_color": "#000000",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#000000",
+        "scroll_bg": "#c0d0ef",
+        "scroll_fg": "#333333",
+    },
+     "Light Gray": {
+        "bg_color": "#f0f0f0",
+        "frame_bg": "#e0e0e0",
+        "button_bg": "#e0e0e0",
+        "button_fg": "#333333",
+        "button_hover": "#d0d0d0",
+        "text_color": "#333333",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#000000",
+        "scroll_bg": "#d0d0d0",
+        "scroll_fg": "#333333",
+    },
+     "Dark": {
+        "bg_color": "#2b2b2b",  # Dark gray background
+        "frame_bg": "#333333",  # Darker gray frame background
+        "button_bg": "#444444",  # Slightly lighter dark gray for buttons
+        "button_fg": "#ffffff",  # White for button text
+        "button_hover": "#555555",  # Lighten on hover
+        "text_color": "#ffffff",  # White text
+        "entry_bg": "#444444",  # Dark gray for entry
+        "entry_fg": "#ffffff",  # White foreground for entry
+        "scroll_bg": "#555555", # Dark gray for scrollbar
+        "scroll_fg": "#ffffff"  # White for scrollbar
+    },
+    "High Contrast": {
+        "bg_color": "#000000",  # Black background
+        "frame_bg": "#222222",  # Slightly lighter black frame background
+        "button_bg": "#ffff00",  # Bright yellow for buttons
+        "button_fg": "#000000",  # Black for button text
+        "button_hover": "#bbbb00",  # Darker yellow on hover
+        "text_color": "#ffffff",  # White for text
+        "entry_bg": "#ffffff",  # White background for entry
+        "entry_fg": "#000000",  # Black foreground for entry
+        "scroll_bg": "#ffff00",  # Bright yellow for scrollbar
+        "scroll_fg": "#000000" # Black for scrollbar
+    }
+}
+
+# Default Theme
+current_theme = "Windows 11 Blue"
 
 # --- Cache Directory ---
 CACHE_DIR = "cache"
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
 CACHE_FILE = os.path.join(CACHE_DIR, "previous_file.json")
+THEME_FILE = os.path.join(CACHE_DIR, "previous_theme.json")
+
 
 def translate_to_console_style(text):
     """Translates the text to console-style log with Gemini, in python interpreter style."""
@@ -126,10 +171,10 @@ def update_file_label():
     file_label.config(text=f"Current File: {file_path}")
 
 def on_button_enter(event):
-    event.widget.config(bg=button_hover)
+    event.widget.config(bg=themes[current_theme]["button_hover"])
 
 def on_button_leave(event):
-    event.widget.config(bg=button_bg)
+    event.widget.config(bg=themes[current_theme]["button_bg"])
 
 def on_enter_key(event):
     update_log()
@@ -168,12 +213,12 @@ def file_menu_view():
                 content = f.read()
                 view_window = tk.Toplevel(root)
                 view_window.title(f"Viewing {os.path.basename(file_path)}")
-                view_text = tk.Text(view_window, wrap=tk.WORD, bg=bg_color, fg=text_color, borderwidth=0)
+                view_text = tk.Text(view_window, wrap=tk.WORD, bg=themes[current_theme]["bg_color"], fg=themes[current_theme]["text_color"], borderwidth=0)
                 view_text.insert(tk.END, content)
                 view_text.config(state=tk.DISABLED)
                 view_text.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
 
-                scrollbar = tk.Scrollbar(view_window, command=view_text.yview, bg=scroll_bg, activebackground=scroll_fg)
+                scrollbar = tk.Scrollbar(view_window, command=view_text.yview, bg=themes[current_theme]["scroll_bg"], activebackground=themes[current_theme]["scroll_fg"])
                 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
                 view_text.config(yscrollcommand=scrollbar.set)
 
@@ -182,11 +227,70 @@ def file_menu_view():
     else:
         messagebox.showerror("Error", "No file opened to view.")
 
+# --- Theme Handling ---
+def load_previous_theme():
+    if os.path.exists(THEME_FILE):
+        try:
+            with open(THEME_FILE, "r") as f:
+                cache_data = json.load(f)
+                return cache_data.get("previous_theme", "Windows 11 Blue")
+        except (json.JSONDecodeError, KeyError):
+             return "Windows 11 Blue"
+    return "Windows 11 Blue"
+
+def save_previous_theme(theme_name):
+     try:
+         with open(THEME_FILE, "w") as f:
+            json.dump({"previous_theme": theme_name}, f)
+     except Exception as e:
+          messagebox.showerror("Error", f"Error saving theme to cache: {e}")
+
+def apply_theme(theme_name):
+    global current_theme
+    current_theme = theme_name
+    root.configure(bg=themes[current_theme]["bg_color"])
+    input_frame.config(bg=themes[current_theme]["frame_bg"])
+    file_frame.config(bg=themes[current_theme]["frame_bg"])
+    file_label.config(bg=themes[current_theme]["frame_bg"], fg=themes[current_theme]["text_color"])
+    log_frame.config(bg=themes[current_theme]["bg_color"])
+    log_display.config(bg=themes[current_theme]["bg_color"], fg=themes[current_theme]["text_color"])
+    scrollbar.config(bg=themes[current_theme]["scroll_bg"], activebackground=themes[current_theme]["scroll_fg"])
+    text_entry.config(bg=themes[current_theme]["entry_bg"], fg=themes[current_theme]["entry_fg"], insertbackground=themes[current_theme]["entry_fg"])
+    
+    # Update button colors
+    update_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
+    save_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
+    change_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
+
+    # Update Labels
+    tk.Label(input_frame, text="Enter Text to Update Workload:", bg=themes[current_theme]["frame_bg"], fg=themes[current_theme]["text_color"]).pack(side=tk.LEFT)
+    
+    # Manually call hover binding functions
+    update_button.bind("<Enter>", on_button_enter)
+    update_button.bind("<Leave>", on_button_leave)
+    save_file_button.bind("<Enter>", on_button_enter)
+    save_file_button.bind("<Leave>", on_button_leave)
+    change_file_button.bind("<Enter>", on_button_enter)
+    change_file_button.bind("<Leave>", on_button_leave)
+
+
+    save_previous_theme(theme_name)
+
+
+def create_theme_menu(menu_bar):
+    theme_menu = tk.Menu(menu_bar, tearoff=0)
+    for theme_name in themes:
+        theme_menu.add_command(label=theme_name, command=lambda name=theme_name: apply_theme(name))
+    menu_bar.add_cascade(label="Theme", menu=theme_menu)
+
 # --- GUI Setup ---
 root = tk.Tk()
 root.title("Gemini Workload Logger")
 root.geometry("600x400")
-root.configure(bg=bg_color, borderwidth=0)
+root.configure(borderwidth=0)
+
+# Variable to store the file path
+file_path = None
 
 # --- File Menu ---
 menu_bar = tk.Menu(root)
@@ -195,10 +299,10 @@ file_menu.add_command(label="Save", command=file_menu_save)
 file_menu.add_command(label="Open", command=file_menu_open)
 file_menu.add_command(label="View", command=file_menu_view)
 menu_bar.add_cascade(label="File", menu=file_menu)
+create_theme_menu(menu_bar)
 root.config(menu=menu_bar)
 
-# Variable to store the file path
-file_path = None
+
 
 # Load previous file if exists
 previous_file = load_previous_file()
@@ -208,48 +312,52 @@ if previous_file and messagebox.askyesno("Load Previous", f"Load previously open
 
 
 # Input Frame
-input_frame = tk.Frame(root, bg=frame_bg, borderwidth=0)
+input_frame = tk.Frame(root, borderwidth=0)
 input_frame.pack(pady=10, padx=10, fill=tk.X)
 
-tk.Label(input_frame, text="Enter Text to Update Workload:", bg=frame_bg, fg=text_color).pack(side=tk.LEFT)
-text_entry = tk.Entry(input_frame, width=40, bg=entry_bg, fg=entry_fg, insertbackground=entry_fg, borderwidth=0)
+tk.Label(input_frame, text="Enter Text to Update Workload:", borderwidth=0).pack(side=tk.LEFT)
+text_entry = tk.Entry(input_frame, width=40, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
 text_entry.bind("<Return>", on_enter_key)
 
-update_button = tk.Button(input_frame, text="Update Log", bg=button_bg, fg=button_fg, borderwidth=0)
+update_button = tk.Button(input_frame, text="Update Log", borderwidth=0)
 update_button.pack(side=tk.LEFT, padx=5)
 update_button.bind("<Enter>", on_button_enter)
 update_button.bind("<Leave>", on_button_leave)
 update_button.config(command=update_log)
 
 # File Frame
-file_frame = tk.Frame(root, bg=frame_bg, borderwidth=0)
+file_frame = tk.Frame(root, borderwidth=0)
 file_frame.pack(pady=10, padx=10, fill=tk.X)
 
-file_label = tk.Label(file_frame, text="Current File: None", bg=frame_bg, fg=text_color)
+file_label = tk.Label(file_frame, text="Current File: None", borderwidth=0)
 file_label.pack(side=tk.LEFT, expand=True, fill=tk.X)
 
-save_file_button = tk.Button(file_frame, text="Save as File", bg=button_bg, fg=button_fg, borderwidth=0)
+save_file_button = tk.Button(file_frame, text="Save as File", borderwidth=0)
 save_file_button.pack(side=tk.LEFT, padx=5)
 save_file_button.bind("<Enter>", on_button_enter)
 save_file_button.bind("<Leave>", on_button_leave)
 save_file_button.config(command=save_as_file)
 
-change_file_button = tk.Button(file_frame, text="Change File", bg=button_bg, fg=button_fg, borderwidth=0)
+change_file_button = tk.Button(file_frame, text="Change File", borderwidth=0)
 change_file_button.pack(side=tk.LEFT, padx=5)
 change_file_button.bind("<Enter>", on_button_enter)
 change_file_button.bind("<Leave>", on_button_leave)
 change_file_button.config(command=change_file)
 
 # Log Display
-log_frame = tk.Frame(root, bg=bg_color, borderwidth=0)
+log_frame = tk.Frame(root, borderwidth=0)
 log_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
-log_display = tk.Text(log_frame, height=15, wrap=tk.WORD, bg=bg_color, fg=text_color, borderwidth=0)
+log_display = tk.Text(log_frame, height=15, wrap=tk.WORD, borderwidth=0)
 log_display.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-scrollbar = tk.Scrollbar(log_frame, command=log_display.yview, bg=scroll_bg, activebackground=scroll_fg)
+scrollbar = tk.Scrollbar(log_frame, command=log_display.yview)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 log_display.config(yscrollcommand=scrollbar.set)
+
+#Load previous theme
+current_theme = load_previous_theme()
+apply_theme(current_theme)
 
 root.mainloop()
