@@ -1,11 +1,14 @@
-# OS or IDE generated files
-.DS_Store
-Thumbs.db
-*.log
-*.bak
-*.swp
+# Ignore .env files in the root directory
+.env
 
-# Python Specific
+# Ignore specific files in the cache directory
+cache/previous_file.json
+cache/previous_theme.json
+
+# Optionally ignore the entire cache directory
+# cache/
+
+# OS generated files
 __pycache__/
 *.pyc
 *.pyo
@@ -28,4 +31,3 @@ temp/
 node_modules/
 .env
 **/.env
-previous_file.json

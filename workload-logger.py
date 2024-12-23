@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 import re
 import json
+import threading
 
 load_dotenv()
 
@@ -84,9 +85,47 @@ if not os.path.exists(CACHE_DIR):
 CACHE_FILE = os.path.join(CACHE_DIR, "previous_file.json")
 THEME_FILE = os.path.join(CACHE_DIR, "previous_theme.json")
 
+# --- Loading Indicators ---
+loading_bar = None
+gemini_loading_label = None
+
+# --- Loading Indicator Functions ---
+def show_loading_bar(message):
+    global loading_bar
+    if loading_bar is None:
+        loading_bar = ttk.Progressbar(root, mode='indeterminate')
+        loading_bar.pack(pady=10)
+        tk.Label(root, text=message).pack()
+    loading_bar.start()
+    root.update_idletasks() # Forces immediate redraw
+
+def hide_loading_bar():
+    global loading_bar
+    if loading_bar:
+        loading_bar.stop()
+        loading_bar.destroy()
+        loading_bar = None
+        for widget in root.winfo_children():
+            if isinstance(widget, tk.Label) and widget.cget("text") in ["Saving File...", "Opening File...", "Loading File..."]:
+                widget.destroy()
+
+def show_gemini_loading():
+    global gemini_loading_label
+    if gemini_loading_label is None:
+        gemini_loading_label = tk.Label(root, text="Generating text...", font=("TkDefaultFont", 10))
+        gemini_loading_label.pack(pady=5)
+        root.update_idletasks()  # Forces the label to be shown immediately.
+
+def hide_gemini_loading():
+    global gemini_loading_label
+    if gemini_loading_label:
+        gemini_loading_label.destroy()
+        gemini_loading_label = None
+
 
 def translate_to_console_style(text):
     """Translates the text to console-style log with Gemini, in python interpreter style."""
+    show_gemini_loading()
     try:
         prompt = f"""
             Translate the following text into a console-style log format that simulates a python interpreter output. Each entry should be on a new line as if it were being executed in a python interpreter. The output should maintain a tone of a command-line interface and should use similar words. Ensure to include '>>>' to indicate that each line is an executable statement.
@@ -115,6 +154,8 @@ def translate_to_console_style(text):
     except Exception as e:
         messagebox.showerror("Error", f"Error with Gemini API: {e}")
         return "Error in translation."
+    finally:
+        hide_gemini_loading()
 
 
 def save_log(log_text, file_path):
@@ -136,6 +177,9 @@ def update_log():
           save_as_file()
         else:
            return
+
+    now = datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     
     translated_text = translate_to_console_style(text)
     
@@ -145,31 +189,53 @@ def update_log():
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    log_text = f"[{formatted_time}] {translated_text}"
-
-    if not file_path:
-          messagebox.showerror("Error", "Save a new file or select an existing file")
-          return
+    log_text = f"{translated_text}"
 
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
         text_entry.delete(0, tk.END)
+        text_entry.focus_set() # Set focus again after successful update
     else:
         messagebox.showerror("Error", "Failed to update log file.")
 
+def save_file():
+    global file_path
+    if file_path:
+      show_loading_bar("Saving File...")
+      try:
+        with open(file_path, "w") as f:
+           f.write(log_display.get("1.0", tk.END))
+      except Exception as e:
+         messagebox.showerror("Error", f"Error saving file: {e}")
+      hide_loading_bar()
+    else:
+        save_as_file()
+
+
 def save_as_file():
     global file_path
+    show_loading_bar("Saving File...")
     file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
     if file_path:
         update_file_label()
         save_previous_file(file_path)
+    hide_loading_bar()
 
 def change_file():
     global file_path
+    show_loading_bar("Opening File...")
     file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
     if file_path:
         update_file_label()
         save_previous_file(file_path)
+        # Load file content into display
+        log_display.delete("1.0", tk.END)
+        try:
+            with open(file_path, "r") as f:
+                log_display.insert(tk.END, f.read())
+        except Exception as e:
+             messagebox.showerror("Error", f"Error loading file contents: {e}")
+    hide_loading_bar()
 
 def update_file_label():
     file_label.config(text=f"Current File: {file_path}")
@@ -202,10 +268,7 @@ def save_previous_file(file_path):
          messagebox.showerror("Error", f"Error saving file to cache: {e}")
 
 def file_menu_save():
-    if file_path:
-        update_log()
-    else:
-        save_as_file()
+    save_file()
 
 def file_menu_open():
     change_file()
@@ -213,6 +276,7 @@ def file_menu_open():
 def file_menu_view():
     if file_path:
         try:
+            show_loading_bar("Loading File...")
             with open(file_path, "r") as f:
                 content = f.read()
                 view_window = tk.Toplevel(root)
@@ -225,9 +289,10 @@ def file_menu_view():
                 scrollbar = tk.Scrollbar(view_window, command=view_text.yview, bg=themes[current_theme]["scroll_bg"], activebackground=themes[current_theme]["scroll_fg"])
                 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
                 view_text.config(yscrollcommand=scrollbar.set)
-
+            hide_loading_bar()
         except Exception as e:
             messagebox.showerror("Error", f"Error viewing file: {e}")
+            hide_loading_bar()
     else:
         messagebox.showerror("Error", "No file opened to view.")
 
@@ -265,6 +330,9 @@ def apply_theme(theme_name):
     update_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     save_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     change_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
+
+    # Update Labels
+    tk.Label(input_frame, text="Enter Text to Update Workload:", bg=themes[current_theme]["frame_bg"], fg=themes[current_theme]["text_color"]).pack(side=tk.LEFT)
     
     # Manually call hover binding functions
     update_button.bind("<Enter>", on_button_enter)
@@ -274,9 +342,7 @@ def apply_theme(theme_name):
     change_file_button.bind("<Enter>", on_button_enter)
     change_file_button.bind("<Leave>", on_button_leave)
 
-
     save_previous_theme(theme_name)
-
 
 def create_theme_menu(menu_bar):
     theme_menu = tk.Menu(menu_bar, tearoff=0)
@@ -290,6 +356,9 @@ root.title("Gemini Workload Logger")
 root.geometry("600x400")
 root.configure(borderwidth=0)
 
+# Variable to store the file path
+file_path = None
+
 # --- File Menu ---
 menu_bar = tk.Menu(root)
 file_menu = tk.Menu(menu_bar, tearoff=0)
@@ -300,8 +369,7 @@ menu_bar.add_cascade(label="File", menu=file_menu)
 create_theme_menu(menu_bar)
 root.config(menu=menu_bar)
 
-# Variable to store the file path
-file_path = None
+
 
 # Load previous file if exists
 previous_file = load_previous_file()
@@ -309,8 +377,6 @@ if previous_file and messagebox.askyesno("Load Previous", f"Load previously open
     file_path = previous_file
     update_file_label()
 
-#Load previous theme
-current_theme = load_previous_theme()
 
 # Input Frame
 input_frame = tk.Frame(root, borderwidth=0)
@@ -320,6 +386,7 @@ input_frame.pack(pady=10, padx=10, fill=tk.X)
 text_entry = tk.Entry(input_frame, width=40, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
 text_entry.bind("<Return>", on_enter_key)
+
 
 update_button = tk.Button(input_frame, text="Update Log", borderwidth=0)
 update_button.pack(side=tk.LEFT, padx=5)
@@ -357,6 +424,10 @@ scrollbar = tk.Scrollbar(log_frame, command=log_display.yview)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 log_display.config(yscrollcommand=scrollbar.set)
 
+#Load previous theme
+current_theme = load_previous_theme()
 apply_theme(current_theme)
+text_entry.focus_set() # Set focus to text_entry on start
+root.after(100, lambda: text_entry.focus_set())
 
 root.mainloop()
