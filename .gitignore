@@ -28,5 +28,5 @@ temp/
 node_modules/
 .env
 **/.env
-/previous_theme.json
-/previous_file.json
+previous_theme.json
+previous_file.json
