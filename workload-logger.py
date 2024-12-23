@@ -141,7 +141,6 @@ def translate_to_console_style(text):
               >>> [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
               >>> [+] 2024-05-08 14:45:00: Implemented login functionality.
               >>> [*] 2024-05-08 15:15:00: Testing user login module.
-              do not type the time and date 2 times only 1 time
 
             Input Text: {text}
             """
@@ -195,6 +194,19 @@ def update_log():
         text_entry.focus_set() # Set focus again after successful update
     else:
         messagebox.showerror("Error", "Failed to update log file.")
+
+def save_file():
+    global file_path
+    if file_path:
+      show_loading_bar("Saving File...")
+      try:
+        with open(file_path, "w") as f:
+           f.write(log_display.get("1.0", tk.END))
+      except Exception as e:
+         messagebox.showerror("Error", f"Error saving file: {e}")
+      hide_loading_bar()
+    else:
+        save_as_file()
 
 
 def save_as_file():
@@ -253,10 +265,7 @@ def save_previous_file(file_path):
          messagebox.showerror("Error", f"Error saving file to cache: {e}")
 
 def file_menu_save():
-    if file_path:
-        update_log()
-    else:
-        save_as_file()
+    save_file()
 
 def file_menu_open():
     change_file()
@@ -341,6 +350,14 @@ root.title("Gemini Workload Logger")
 root.geometry("600x400")
 root.configure(borderwidth=0)
 
+# Set Icon
+try:
+    icon_path = os.path.join(os.path.dirname(__file__), "geminiicon.png")
+    icon = tk.PhotoImage(file=icon_path)
+    root.iconphoto(False, icon)
+except Exception as e:
+    print(f"Error loading icon: {e}")
+    
 # Variable to store the file path
 file_path = None
 
