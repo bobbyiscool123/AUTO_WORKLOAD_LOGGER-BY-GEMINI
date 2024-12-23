@@ -147,10 +147,6 @@ def update_log():
 
     log_text = f"[{formatted_time}] {translated_text}"
 
-    if not file_path:
-          messagebox.showerror("Error", "Save a new file or select an existing file")
-          return
-
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
         text_entry.delete(0, tk.END)
@@ -266,9 +262,6 @@ def apply_theme(theme_name):
     save_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     change_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
 
-    # Update Labels
-    tk.Label(input_frame, text="Enter Text to Update Workload:", bg=themes[current_theme]["frame_bg"], fg=themes[current_theme]["text_color"]).pack(side=tk.LEFT)
-    
     # Manually call hover binding functions
     update_button.bind("<Enter>", on_button_enter)
     update_button.bind("<Leave>", on_button_leave)
@@ -276,7 +269,6 @@ def apply_theme(theme_name):
     save_file_button.bind("<Leave>", on_button_leave)
     change_file_button.bind("<Enter>", on_button_enter)
     change_file_button.bind("<Leave>", on_button_leave)
-
 
     save_previous_theme(theme_name)
 
@@ -306,23 +298,18 @@ menu_bar.add_cascade(label="File", menu=file_menu)
 create_theme_menu(menu_bar)
 root.config(menu=menu_bar)
 
-
-
-# Load previous file if exists
-previous_file = load_previous_file()
-if previous_file and messagebox.askyesno("Load Previous", f"Load previously opened file '{os.path.basename(previous_file)}'?"):
-    file_path = previous_file
-    update_file_label()
-
+# Load previous theme
+current_theme = load_previous_theme()
 
 # Input Frame
 input_frame = tk.Frame(root, borderwidth=0)
 input_frame.pack(pady=10, padx=10, fill=tk.X)
 
-tk.Label(input_frame, text="Enter Text to Update Workload:", borderwidth=0).pack(side=tk.LEFT)
+
 text_entry = tk.Entry(input_frame, width=40, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
 text_entry.bind("<Return>", on_enter_key)
+
 
 update_button = tk.Button(input_frame, text="Update Log", borderwidth=0)
 update_button.pack(side=tk.LEFT, padx=5)
@@ -360,8 +347,16 @@ scrollbar = tk.Scrollbar(log_frame, command=log_display.yview)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 log_display.config(yscrollcommand=scrollbar.set)
 
-#Load previous theme
-current_theme = load_previous_theme()
+# Load previous file if exists
+previous_file = load_previous_file()
+if previous_file and messagebox.askyesno("Load Previous", f"Load previously opened file '{os.path.basename(previous_file)}'?"):
+    file_path = previous_file
+    update_file_label()
+    text_entry.focus_set() # Set focus to text_entry after loading previous file
+    
+
 apply_theme(current_theme)
+text_entry.focus_set() # Set focus to text_entry on start
+
 
 root.mainloop()
