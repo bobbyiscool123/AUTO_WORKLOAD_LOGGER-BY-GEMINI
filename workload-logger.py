@@ -141,7 +141,7 @@ def translate_to_console_style(text):
               >>> [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
               >>> [+] 2024-05-08 14:45:00: Implemented login functionality.
               >>> [*] 2024-05-08 15:15:00: Testing user login module.
-              make the translation so it makes spaces before generation next one so each line is individial before start a new one like each line should be a new one 
+              if huge text is prompted then send the output responce in a very well mannered way by cutting them into smaller proportions
 
 
             Input Text: {text}
