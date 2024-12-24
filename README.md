@@ -34,3 +34,10 @@ A simple GUI application to log your project workload using the Gemini API for c
 ## Important
 
 -   Do not commit the `.env` file containing your API key to version control. The included `.gitignore` takes care of this.
+
+## changelog
+*   Adjusted Gemini API interaction for improved stability.
+*   Removed structured response constraint to resolve API errors.
+*   This change simplifies data retrieval from the model.
+*   The system now expects and processes standard text output.
+*   This modification enhances application reliability.
