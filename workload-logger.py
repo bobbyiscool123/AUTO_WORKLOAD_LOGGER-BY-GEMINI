@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import re
 import json
 import threading
+from google.ai.generativelanguage_v1beta.types import content
 
 load_dotenv()
 
@@ -21,7 +22,24 @@ if not GOOGLE_API_KEY:
 # Configure Gemini API
 genai.configure(api_key=GOOGLE_API_KEY)
 
-model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
+# --- Gemini Model Configuration ---
+generation_config = {
+    "temperature": 2,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 8192,
+}
+
+model = genai.GenerativeModel(
+    model_name="gemini-2.0-flash-exp",
+    generation_config=generation_config,
+    system_instruction="You are a system that simulates a console logging environment. For every user input you receive, you will generate a simulated console log entry.\n\nIf the user input contains the phrase \"bad news\", format the output as a JavaScript error log, starting with [Error] followed by the user's input.\n\nFor all other user inputs shorter than 30 characters, format the output as a structured log entry that resembles code, demonstrating the logical structure of the input. Start each log with [Log] and use indentation or keywords to show the parts of the input. For example, if the input is \"The cat sat\", the output could be:\n\n[Log] {\n[Log] subject: \"The cat\",\n[Log] action: \"sat\"\n[Log] }\n\nIf the user input is longer than 30 characters, break it down into multiple logically connected console log entries that make sense. Each entry should start with [Server] followed by a descriptive message about a part of the user's input. For example, if the user input is \"The quick brown fox jumps over the lazy fox with great agility and speed\", the output could be:\n\n[Server] Processing input: \"The quick brown fox jumps over the lazy fox with great agility and speed\"\n[Server] Analyzing subject: \"The quick brown fox\"\n[Server] Identifying action: \"jumps over the lazy fox\"\n[Server] Detecting attributes: \"with great agility and speed\"",
+)
+
+chat_session = model.start_chat(
+    history=[
+    ]
+)
 
 # --- Color Palettes ---
 themes = {
@@ -122,43 +140,18 @@ def hide_gemini_loading():
         gemini_loading_label.destroy()
         gemini_loading_label = None
 
-
 def translate_to_console_style(text):
-    """Translates the text to console-style log with Gemini, in python interpreter style."""
+    """Translates the text to console-style log with Gemini, using the new instructions."""
     show_gemini_loading()
     try:
-        prompt = f"""
-            Translate the following text into a console-style log format that simulates a python interpreter output. Each entry should be on a new line as if it were being executed in a python interpreter. The output should maintain a tone of a command-line interface and should use similar words. Ensure to include '>>>' to indicate that each line is an executable statement.
-            
-            Remove any triple backticks from the output. Remove any extra white space.
-
-            Example Input:
-              - Started working on the user authentication feature.
-              - Implemented login functionality.
-              - Testing the user login module.
-
-            Example Output:
-              >>> [+] 2024-05-08 14:30:00: Started work on 'user authentication'.
-              >>> [+] 2024-05-08 14:45:00: Implemented login functionality.
-              >>> [*] 2024-05-08 15:15:00: Testing user login module.
-              if huge text is prompted then send the output responce in a very well mannered way by cutting them into smaller proportions
-
-
-            Input Text: {text}
-            """
-        
-        response = model.generate_content(prompt)
-        
-        # Remove triple backticks and extra spaces, then return
-        cleaned_text = re.sub(r'```\w*\n|```', '', response.text).strip()
-        cleaned_text = ' '.join(cleaned_text.split())
+        response = chat_session.send_message(text)
+        cleaned_text = response.text.strip()
         return cleaned_text
     except Exception as e:
         messagebox.showerror("Error", f"Error with Gemini API: {e}")
         return "Error in translation."
     finally:
         hide_gemini_loading()
-
 
 def save_log(log_text, file_path):
     try:
@@ -180,20 +173,17 @@ def update_log():
         else:
            return
 
-    now = datetime.now()
-    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
-    
     translated_text = translate_to_console_style(text)
-    
+
     if translated_text == "Error in translation.":
         return
-    
-    log_text = f"[{formatted_time}] {translated_text.replace('2024-05-08', now.strftime('%Y-%m-%d'))}"
+
+    log_text = f"{translated_text}"
 
     if save_log(log_text, file_path):
         log_display.insert(tk.END, log_text + '\n')
         text_entry.delete(0, tk.END)
-        text_entry.focus_set() # Set focus again after successful update
+        text_entry.focus_set()
     else:
         messagebox.showerror("Error", "Failed to update log file.")
 
@@ -209,7 +199,6 @@ def save_file():
       hide_loading_bar()
     else:
         save_as_file()
-
 
 def save_as_file():
     global file_path
@@ -247,6 +236,10 @@ def on_button_leave(event):
 
 def on_enter_key(event):
     update_log()
+
+def clear_text_entry():
+    text_entry.delete(0, tk.END)
+    text_entry.focus_set()
 
 # --- Persistent File Handling ---
 def load_previous_file():
@@ -324,11 +317,12 @@ def apply_theme(theme_name):
     log_display.config(bg=themes[current_theme]["bg_color"], fg=themes[current_theme]["text_color"])
     scrollbar.config(bg=themes[current_theme]["scroll_bg"], activebackground=themes[current_theme]["scroll_fg"])
     text_entry.config(bg=themes[current_theme]["entry_bg"], fg=themes[current_theme]["entry_fg"], insertbackground=themes[current_theme]["entry_fg"])
-    
+
     # Update button colors
     update_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     save_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
     change_file_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
+    clear_button.config(bg=themes[current_theme]["button_bg"], fg=themes[current_theme]["button_fg"])
 
     # Manually call hover binding functions
     update_button.bind("<Enter>", on_button_enter)
@@ -337,6 +331,8 @@ def apply_theme(theme_name):
     save_file_button.bind("<Leave>", on_button_leave)
     change_file_button.bind("<Enter>", on_button_enter)
     change_file_button.bind("<Leave>", on_button_leave)
+    clear_button.bind("<Enter>", on_button_enter)
+    clear_button.bind("<Leave>", on_button_leave)
 
     save_previous_theme(theme_name)
 
@@ -359,7 +355,7 @@ try:
     root.iconphoto(False, icon)
 except Exception as e:
     print(f"Error loading icon: {e}")
-    
+
 # Variable to store the file path
 file_path = None
 
@@ -380,17 +376,21 @@ current_theme = load_previous_theme()
 input_frame = tk.Frame(root, borderwidth=0)
 input_frame.pack(pady=10, padx=10, fill=tk.X)
 
-
 text_entry = tk.Entry(input_frame, width=40, borderwidth=0)
 text_entry.pack(side=tk.LEFT, padx=5)
 text_entry.bind("<Return>", on_enter_key)
-
 
 update_button = tk.Button(input_frame, text="Update Log", borderwidth=0)
 update_button.pack(side=tk.LEFT, padx=5)
 update_button.bind("<Enter>", on_button_enter)
 update_button.bind("<Leave>", on_button_leave)
 update_button.config(command=update_log)
+
+clear_button = tk.Button(input_frame, text="Clear", borderwidth=0)
+clear_button.pack(side=tk.LEFT, padx=5)
+clear_button.bind("<Enter>", on_button_enter)
+clear_button.bind("<Leave>", on_button_leave)
+clear_button.config(command=clear_text_entry)
 
 # File Frame
 file_frame = tk.Frame(root, borderwidth=0)
@@ -436,7 +436,6 @@ if previous_file and messagebox.askyesno("Load Previous", f"Load previously open
             log_display.insert(tk.END, f.read())
     except Exception as e:
         messagebox.showerror("Error", f"Error loading file contents: {e}")
-
 
 apply_theme(current_theme)
 text_entry.focus_set() # Set focus to text_entry on start
