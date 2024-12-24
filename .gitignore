@@ -12,9 +12,22 @@ cache/previous_theme.json
 __pycache__/
 *.pyc
 *.pyo
-*.log
-*.bak
-*.swp
-*.swo
-.*.swp
-.*.swo
+*.egg-info/
+build/
+dist/
+venv/
+env/
+*.egg
+
+# Secrets/credentials:
+.env
+*.key
+*.pem
+*.p12
+
+# Various temporary files/folders
+tmp/
+temp/
+node_modules/
+.env
+**/.env
