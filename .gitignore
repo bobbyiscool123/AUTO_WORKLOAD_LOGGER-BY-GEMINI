@@ -1,33 +1,65 @@
-# Ignore .env files in the root directory
+# Ignore .env files with credentials
 .env
+**/.env
 
-# Ignore specific files in the cache directory
-cache/previous_file.json
-cache/previous_theme.json
-
-# Optionally ignore the entire cache directory
-# cache/
-
-# OS generated files
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-build/
-dist/
-venv/
-env/
-*.egg
-
-# Secrets/credentials:
-.env
+# API Keys/credentials
 *.key
 *.pem
 *.p12
+*_api_key*
 
-# Various temporary files/folders
-tmp/
-temp/
-node_modules/
-.env
-**/.env
+# Cache directory content
+cache/
+*.pkl
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Project specific files
+ELECTED TASKS.MD
+changes and ideas.md
+.flake8
